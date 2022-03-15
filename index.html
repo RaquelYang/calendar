@@ -61,6 +61,15 @@
     .today {
       color: red
     }
+
+    .day span {
+      display: block;
+      background-color: #eee;
+    }
+
+    .todos span.done {
+      text-decoration: line-through;
+    }
   </style>
 </head>
 
@@ -86,85 +95,139 @@
         <div class="day" v-for="j in 7" :data-date="calendarMonth[(i-1)*7+j-1].date" :class="{
           today:calendarMonth[(i-1)*7+j-1].year === today.year && calendarMonth[(i-1)*7+j-1].month === today.month && calendarMonth[(i-1)*7+j-1].date === today.date,
           other:calendarMonth[(i-1)*7+j-1].month  !== calendar.month
-        }"></div>
+        }" @dblclick="addTodo(calendarMonth[(i-1)*7+j-1])">
+          <span v-if="calendarMonth[(i-1)*7+j-1].count">{{ calendarMonth[(i-1)*7+j-1].count }}</span>
+        </div>
+      </div>
+    </div>
+    <div class="todos">
+      <div v-for="item in currentMonth">
+        {{ item.month + 1 }} / {{ item.date }}
+        <ul v-for="(todo,index) in item.todos">
+          <li>
+            <input type="checkbox" v-model="todo.done">
+            <span :class="{done:todo.done}" @dblclick="editTodo(todo)">{{ todo.content }}</span>
+            <button @click="deleteTodo(item,index)">刪除</button>
+          </li>
+        </ul>
       </div>
     </div>
   </div>
   <script src='https://cdnjs.cloudflare.com/ajax/libs/vue/2.6.14/vue.js'></script>
   <script>
-    (function (Vue) {
-      new Vue({
-        el: '#app',
-        data() {
-          return {
-            today: {
-              year: 0,
-              month: 0,
-              date: 0,
-              day: 0
-            },
-            calendar: {
-              year: 0,
-              month: 0,
-              date: 0,
-              day: 0
-            }
+    var vm = new Vue({
+      el: '#app',
+      data() {
+        return {
+          today: {
+            year: 0,
+            month: 0,
+            date: 0,
+            day: 0
+          },
+          calendar: {
+            year: 0,
+            month: 0,
+            date: 0,
+            day: 0
+          },
+          todos: {}
+        }
+      },
+      mounted() {
+        this.setToday()
+        let localStorage = JSON.parse(window.localStorage.getItem('myTodos')) || {}
+        this.$set(this, 'todos', localStorage)
+      },
+      methods: {
+        deleteTodo(item, index) {
+          if (window.confirm('確認要刪除嗎？')) {
+            item.todos.splice(index, 1)
+            window.localStorage.setItem('myTodos', JSON.stringify(this.todos))
           }
         },
-        mounted() {
-          this.setToday()
+        editTodo(todo) {
+          let content = window.prompt('請輸入修改內容', todo.content)
+          if (content.trim()) {
+            todo.content = content.trim()
+            window.localStorage.setItem('myTodos', JSON.stringify(this.todos))
+          }
         },
-        methods: {
-          setToday() {
-            const date = new Date()
-            this.today.year = this.calendar.year = date.getFullYear()
-            this.today.month = this.calendar.month = date.getMonth()
-            this.today.date = this.calendar.date = date.getDate()
-            this.today.day = this.calendar.day = date.getDay()
-          },
-          adjustYear(fix) {
-            this.calendar.year += fix
-          },
-          adjustMonth(fix) {
-            let month = this.calendar.month + fix
-            if (month > 12) {
-              this.adjustYear(1)
-              this.calendar.month = 1
-            } else if (month < 1) {
-              this.adjustYear(-1)
-              this.calendar.month = 12
-            } else {
-              this.calendar.month = month
-            }
-          },
+        addTodo({ year, month, date }) {
+          let content = window.prompt('說輸入代辦事項', '')
+          let y = this.todos[year] || {}
+          let m = y[month] || {}
+          let d = m[date] || []
+          d.push({
+            content: content.trim(),
+            done: false
+          })
+          this.$set(this.todos, year, y)
+          this.$set(this.todos[year], month, m)
+          this.$set(this.todos[year][month], date, d)
+          window.localStorage.setItem('myTodos', JSON.stringify(this.todos))
         },
-        computed: {
-          calendarFirstDay() {
-            const mDate = new Date(this.calendar.year, this.calendar.month, 1)
-            const date = new Date(this.calendar.year, this.calendar.month, 1 - mDate.getDay())
-            return {
+        getTodos({ year, month, date }) {
+          return year in this.todos && month in this.todos[year] && date in this.todos[year][month] ? this.todos[year][month][date] : []
+        },
+        setToday() {
+          const date = new Date()
+          this.today.year = this.calendar.year = date.getFullYear()
+          this.today.month = this.calendar.month = date.getMonth()
+          this.today.date = this.calendar.date = date.getDate()
+          this.today.day = this.calendar.day = date.getDay()
+        },
+        adjustYear(fix) {
+          this.calendar.year += fix
+        },
+        adjustMonth(fix) {
+          let month = this.calendar.month + fix
+          if (month > 11) {
+            this.adjustYear(1)
+            this.calendar.month = 0
+          } else if (month < 0) {
+            this.adjustYear(-1)
+            this.calendar.month = 11
+          } else {
+            this.calendar.month = month
+          }
+        },
+      },
+      computed: {
+        calendarFirstDay() {
+          const mDate = new Date(this.calendar.year, this.calendar.month, 1)
+          const date = new Date(this.calendar.year, this.calendar.month, 1 - mDate.getDay())
+          return {
+            year: date.getFullYear(),
+            month: date.getMonth(),
+            date: date.getDate(),
+            day: date.getDay(),
+          }
+        },
+        calendarMonth() {
+          const data = []
+          let date = ''
+          for (let i = 0; i < 42; i++) {
+            date = new Date(this.calendarFirstDay.year, this.calendarFirstDay.month, this.calendarFirstDay.date + i)
+            let d = {
               year: date.getFullYear(),
               month: date.getMonth(),
               date: date.getDate(),
               day: date.getDay(),
             }
-          },
-          calendarMonth() {
-            const data = []
-            for (let i = 0; i < 42; i++) {
-              date = new Date(this.calendarFirstDay.year, this.calendarFirstDay.month, this.calendarFirstDay.date + i)
-              data.push({
-                year: date.getFullYear(),
-                month: date.getMonth(),
-                date: date.getDate(),
-                day: date.getDay(),
-              })
-            }
-            return data
+            d.count = this.getTodos(d).length
+            d.todos = this.getTodos(d)
+            data.push(d)
           }
+          return data
+        },
+        currentMonth() {
+          return this.calendarMonth.filter(date => {
+            return date.month === this.calendar.month && date.count
+          })
         }
-      })
-    })(Vue)
+      }
+    })
   </script>
 </body>
 
