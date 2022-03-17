@@ -13,6 +13,10 @@
 
     html {
       text-align: center;
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      margin-bottom: 5rem;
     }
 
     .calendar {
@@ -67,7 +71,43 @@
       background-color: #eee;
     }
 
-    .todos span.done {
+    .todos {
+      display: flex;
+      justify-content: space-around;
+    }
+
+    .todos div {
+      width: 40%;
+    }
+
+    .todos p {
+      font-size: 3rem;
+    }
+
+    tr {
+      border: 1px solid #ccc;
+    }
+
+    table {
+      width: 100%;
+    }
+
+    table,
+    tr,
+    td,
+    th {
+      border-collapse: collapse;
+      padding: 10px;
+
+    }
+
+    .todos .tabletodos {
+      display: block;
+      text-align: start;
+      padding-left: 40%;
+    }
+
+    .tabletodos span.done {
       text-decoration: line-through;
     }
   </style>
@@ -101,16 +141,77 @@
       </div>
     </div>
     <div class="todos">
-      <div v-for="item in currentMonth">
-        {{ item.month + 1 }} / {{ item.date }}
-        <ul v-for="(todo,index) in item.todos">
-          <li>
-            <input type="checkbox" v-model="todo.done">
+      <div>
+        <p>本月項目</p>
+        <section>
+          <!-- <span>{{ item.month + 1 }} / {{ item.date }}</span> -->
+          <table>
+            <thead>
+              <tr>
+                <th>日期</th>
+                <th>代辦事項</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="item in currentMonth">
+                <td>
+                  {{ item.month + 1 }} / {{ item.date }}
+                </td>
+                <td class="tabletodos" v-for="(todo,index) in item.todos">
+                  <input type="checkbox" v-model="todo.done">
+                  <span :class="{done:todo.done}" @dblclick="editTodo(todo)">{{ todo.content }}</span>
+                  <button @click="deleteTodo(item,index)">刪除</button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+          <!-- <div v-for="(todo,index) in item.todos" style="display:inline">
+            <input type="checkbox">
             <span :class="{done:todo.done}" @dblclick="editTodo(todo)">{{ todo.content }}</span>
             <button @click="deleteTodo(item,index)">刪除</button>
-          </li>
-        </ul>
+          </div> -->
+
+        </section>
       </div>
+      <!-- <div>
+        <p>已完成項目</p>
+        <section>
+          <table>
+            <thead>
+              <tr>
+                <th>日期</th>
+                <th>代辦事項</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="item in currentMonth">
+                <td>
+                  {{ item.month + 1 }} / {{ item.date }}
+                </td>
+                <td class="tabletodos" v-for="(todo,index) in item.todos">
+                  <input type="checkbox" v-model="todo.done">
+                  <span :class="{done:todo.done}" @dblclick="editTodo(todo)">{{ todo.content }}</span>
+                  <button @click="deleteTodo(item,index)">刪除</button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </section>
+      </div> -->
+      <!-- <div>
+        <p>未完成項目</p>
+        <div v-for="item in currentMonth">
+          {{ item.month + 1 }} / {{ item.date }}
+          <ul v-for="(todo,index) in item.todos">
+            <li>
+              <input type="checkbox" v-model="todo.done">
+              <span :class="{done:todo.done}" @dblclick="editTodo(todo)">{{ todo.content }}</span>
+              <button @click="deleteTodo(item,index)">刪除</button>
+            </li>
+          </ul>
+        </div>
+      </div> -->
+
     </div>
   </div>
   <script src='https://cdnjs.cloudflare.com/ajax/libs/vue/2.6.14/vue.js'></script>
@@ -154,7 +255,7 @@
           }
         },
         addTodo({ year, month, date }) {
-          let content = window.prompt('說輸入代辦事項', '')
+          let content = window.prompt('請輸入代辦事項', '')
           let y = this.todos[year] || {}
           let m = y[month] || {}
           let d = m[date] || []
@@ -225,6 +326,24 @@
           return this.calendarMonth.filter(date => {
             return date.month === this.calendar.month && date.count
           })
+        },
+        // filteredDoneTodos() {
+        //   return this.currentMonth.map(date => {
+        //     date.todos = date.todos.filter(todo => {
+        //       if (todo.done) {
+        //         return todo
+        //       }
+        //     })
+        //     return date
+        //   })
+        // }
+      },
+      watch: {
+        todos: {
+          deep: true,
+          handler() {
+            window.localStorage.setItem('myTodos', JSON.stringify(this.todos))
+          }
         }
       }
     })
